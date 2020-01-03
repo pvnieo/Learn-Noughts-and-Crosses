@@ -4,7 +4,7 @@ A simple implementation of the `tic-tac-toe` game using pygame interface, and mu
 The available AIs are:
 
  - A random agent: plays each move randomly.
- - A minmax agent with levels: this is an implementation of the algorithm of minmax, one can choose the levels of the AI he is playing against, this represents the depth of the minmax shaft we are going to evaluate, the "easy" level corresponds to a depth of 1, "medium" to a depth of 2, "hard" to a depth of 9.
+ - A minmax agent with levels: this is an implementation of the algorithm of minmax, one can choose the levels of the AI he is playing against, this represents the depth of the minmax tree we are going to evaluate, the "easy" level corresponds to a depth of 1, "medium" to a depth of 2, "hard" to a depth of 9.
  - A Q learning agent, trained using the algorithm of tabular Q learning. This agent has the same difficulty as the "hard" minmax.
 
 <div align="center">
