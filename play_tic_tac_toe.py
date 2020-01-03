@@ -1,11 +1,14 @@
 # stdlib
 import random
 import time
+import pickle
 import argparse
+from argparse import RawTextHelpFormatter
 from collections import defaultdict
 from itertools import cycle
 # 3p
 import pygame
+import numpy as np
 
 
 class Board:
@@ -56,7 +59,8 @@ class TicTacToe:
         self.w = args.width
         self.player1 = args.player1  # player 1 plays with "X"
         self.player2 = args.player2  # player 2 plays with "O"
-        self.level = args.level
+        levels = {'easy': 1, 'medium': 2, 'hard': 9}
+        self.level = levels[args.level]
         self.waiting_time = args.time
 
         # set properties
@@ -64,15 +68,20 @@ class TicTacToe:
         self.turns = cycle(["1", "2"])
 
         # function playing for players
-        self.play_func = {"1": self.play_human if self.player1 == "human" else self.play_ai}
-        self.play_func['2'] = self.play_human if self.player2 == "human" else self.play_ai
+        players = {"human": self.play_human, "minmax": self.play_minmax, "ql": self.play_ql, "random": self.play_random}
+        self.play_func = {"1": players[self.player1], "2": players[self.player2]}
 
         # winning combinations
         self.wins = [{0, 1, 2}, {3, 4, 5}, {6, 7, 8}, {0, 3, 6}, {1, 4, 7}, {2, 5, 8}, {0, 4, 8}, {2, 4, 6}]
         self.minmax_dict = {}  # store results of minmax algorithms to use later (improve speed)
 
+        # load Q learning model
+        with open("ql.pkl", "rb") as f:
+            self.Q = pickle.load(f)
+
     def new_game(self):
         self.board = Board(self.w)
+        self.state = ['.' for _ in range(9)]
         self.possible_movs = list(range(9))
         self.movs = {"1": set(), "2": set()}  # list of movs of each player
         winner = 0
@@ -96,13 +105,30 @@ class TicTacToe:
                     case_n = self.board.coord_to_pos(*event.pos)
                     return self.do_step(turn_of, case_n)
 
-    def play_ai(self, turn_of):
+    def play_minmax(self, turn_of):
         time.sleep(0.1)
         turn_op = "1" if turn_of == "2" else "2"
         case_n = self.minmax(self.movs[turn_of], self.movs[turn_op], depth=self.level, max_step=True)[1]
         return self.do_step(turn_of, case_n)
 
+    def play_ql(self, turn_of):
+        time.sleep(0.1)
+        state_hash = "".join(self.state)
+        if turn_of == "2":
+            state_hash = state_hash.replace("1", "?").replace("2", "1").replace("?", "2")
+        if state_hash in self.Q:
+            case_n = np.argmax(self.Q[state_hash])
+        else:
+            case_n = random.choice(self.possible_movs)
+        return self.do_step(turn_of, case_n)
+
+    def play_random(self, turn_of):
+        time.sleep(0.1)
+        case_n = random.choice(self.possible_movs)
+        return self.do_step(turn_of, case_n)
+
     def do_step(self, turn_of, case_n):
+        self.state[case_n] = turn_of
         self.possible_movs.remove(case_n)
         self.draw_case(turn_of, case_n)
         self.movs[turn_of].add(case_n)
@@ -157,24 +183,42 @@ class TicTacToe:
 
 def main(args):
     game = TicTacToe(args)
-    while True:
+    for _ in range(args.total_games):
         game.new_game()
+    print()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="implementation of a simple tic tac toe game"
+        description="Implementation of a tic tac toe game with levels and multiple AIs.",
+        formatter_class=RawTextHelpFormatter
     )
-    parser.add_argument("-l", "--level", type=int, default=1,
-                        help="Level of the game, concretely, this represents the depth of the evaluated minmax tree")
-    parser.add_argument("-p1", "--player1", choices=["human", "ai"], default="human",
-                        help="Controler of player 1, always plays with 'X'")
-    parser.add_argument("-p2", "--player2", choices=["human", "ai"], default="ai",
-                        help="Controler of player 2, always plays with 'O'")
+    parser.add_argument("-l", "--level", choices=["easy", "medium", "hard"], default="medium",
+                        help="""Level of the game, used only if minmax algorithm is selected.
+Concretely, this represents the depth of the evaluated minmax tree:
+    * easy: depth = 1
+    * medium: depth = 2
+    * hard: depth = 9""")
+    parser.add_argument("-p1", "--player1", choices=["human", "minmax", "ql", "random"], default="human",
+                        help="""Controler of player 1, always plays with 'X'.
+Player can be either:
+    * human: a human player gives the instruction
+    * minmax: a minmax with a depth of tree = level
+    * ql: a Q learning agent
+    * random: a random agent""")
+    parser.add_argument("-p2", "--player2", choices=["human", "minmax", "ql", "random"], default="minmax",
+                        help="""Controler of player 2, always plays with 'O'.
+Player can be either:
+    * human: a human player gives the instruction
+    * minmax: a minmax with a depth of tree = level
+    * ql: a Q learning agent
+    * random: a random agent""")
     parser.add_argument("-w", "--width", type=int, default=900,
                         help="Width and height of the board")
     parser.add_argument("-t", "--time", type=int, default=2,
                         help="Waiting time between two consecutive games in secondes")
+    parser.add_argument("-tg", "--total_games", type=int, default=10,
+                        help="Maximum number of games that will be played")
 
     args = parser.parse_args()
     main(args)
