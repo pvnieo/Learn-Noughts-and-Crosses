@@ -1,4 +1,4 @@
-# Tic Tac Toe [[Blog post]](https://pvnieo.github.io/post/learn-tic-tac-toe/)
+# Tic Tac Toe [see [Blog post](https://pvnieo.github.io/post/learn-tic-tac-toe/)]
 A simple implementation of the `tic-tac-toe` game using pygame interface, and multiple AI agents to play against. There is a possibility of a human vs human, human vs AI or AI vs AI match.
 
 The available AIs are:
